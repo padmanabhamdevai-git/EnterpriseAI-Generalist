@@ -7,8 +7,9 @@ matching by meaning, not by shared words.
 import numpy as np
 from dotenv import load_dotenv
 from openai import OpenAI
+from pathlib import Path
 
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parent.parent / "ch01" / ".env")
 client = OpenAI()
 
 EMBED_MODEL = "text-embedding-3-small"  # pinned: chunks and queries share it

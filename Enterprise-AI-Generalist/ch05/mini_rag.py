@@ -52,7 +52,7 @@ def answer(question: str, k: int = 4) -> str:
     print("  retrieved:", [(h["doc"], h["section"], round(h["score"], 2))
                            for h in hits])
     return ask(build_prompt(question, hits), system=GROUNDING_CONTRACT,
-               provider="anthropic", temperature=0.2, max_tokens=400).text
+               provider="anthropic", max_tokens=800).text
 
 
 if __name__ == "__main__":

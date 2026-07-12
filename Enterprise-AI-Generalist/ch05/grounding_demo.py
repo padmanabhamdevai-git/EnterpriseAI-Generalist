@@ -19,7 +19,7 @@ print("=" * 70)
 print("1 · UNGROUNDED — the closed-book exam:")
 print(ask(QUESTION,
           system="You are Meridian Systems' helpful internal assistant.",
-          provider="anthropic", temperature=0.3, max_tokens=300).text)
+          provider="anthropic", max_tokens=800).text)
 print("\n   ^ Fluent. Specific. Fabricated. Check any 'fact' above against")
 print("     corpus.py — the real runbook says something else entirely.\n")
 
