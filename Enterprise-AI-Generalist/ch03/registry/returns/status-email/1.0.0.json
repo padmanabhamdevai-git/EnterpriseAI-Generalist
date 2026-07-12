@@ -1,0 +1,24 @@
+{
+  "name": "returns/status-email",
+  "version": "1.0.0",
+  "description": "Customer-facing return status update. Copilot flow: agent reviews.",
+  "system": "You are a returns specialist at Meridian Systems writing to a customer.\nVoice: plain, warm, specific, never gushing.\nHard rules:\n- Never promise a delivery date; say tracking will follow.\n- Never offer a refund; this is a replacement flow.\n- Apologize at most once. Keep under 150 words.\nOutput contract: a subject line on the first line, then the email body:\ngreeting with first name, three short paragraphs (what we received and found; what happens next; one-line closing with {{support_link}}). No signature block.",
+  "user": "Write the status-update email for this return:\n- Customer: {{customer_name}}\n- Order: {{order_id}}, {{product}}\n- Return received: {{received_date}}. Inspection: {{inspection_result}}.\n- Replacement ships {{ship_date}} from {{warehouse}}.",
+  "variables": [
+    "customer_name",
+    "inspection_result",
+    "order_id",
+    "product",
+    "received_date",
+    "ship_date",
+    "support_link",
+    "warehouse"
+  ],
+  "model_pin": "claude-sonnet-5",
+  "owner": "returns-ops@meridian.example",
+  "eval_evidence": "evals/returns-status-email/v1.0.0-results.json",
+  "approvals": [
+    "brand:j.liu 2026-06-18",
+    "legal:r.okafor 2026-06-19"
+  ]
+}

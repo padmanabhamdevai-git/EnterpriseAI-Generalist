@@ -80,6 +80,6 @@ if __name__ == "__main__":
 
     from ai_client import ask
 
-    resp = ask(user, system=system, provider="anthropic", temperature=0.4)
+    resp = ask(user, system=system, provider="anthropic")
     print(f"\n--- DRAFT ({resp.input_tokens}+{resp.output_tokens} tokens) ---")
     print(resp.text)

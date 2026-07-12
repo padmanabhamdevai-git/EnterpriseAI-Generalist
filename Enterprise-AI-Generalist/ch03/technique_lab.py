@@ -6,6 +6,13 @@ boundary cases, because that is where techniques differentiate.
 Read the trade, not just the score: few-shot buys boundary accuracy with input
 tokens; chain-of-thought buys reasoning accuracy with output tokens (and
 latency). Zero-shot is free.
+
+Reasoning-era note: the current flagship models reason internally before
+answering, so explicit chain-of-thought prompting overlaps with what the model
+already does — the three variants may converge more than the book describes. The
+lesson (few-shot pins boundary behavior; instructions still shape output) holds.
+`temperature` is no longer accepted and `max_tokens` must leave room for internal
+reasoning; see ch03/DOCUMENTATION.md.
 """
 import time
 
@@ -66,7 +73,7 @@ def run(variant_name: str, template: str) -> None:
     for email, expected in EVAL:
         resp = ask(template.format(cats=CATEGORIES, email=email),
                    system="You are a precise procurement operations assistant.",
-                   provider="openai", temperature=0.0, max_tokens=200)
+                   provider="openai", max_tokens=512)
         tokens += resp.output_tokens
         if final_answer(resp.text) == expected:
             correct += 1
