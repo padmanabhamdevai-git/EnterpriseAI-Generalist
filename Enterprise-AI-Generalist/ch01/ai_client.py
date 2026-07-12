@@ -33,8 +33,11 @@ def ask(
         prompt: The user request.
         system: Role/behavior instructions for the model.
         provider: "openai" or "anthropic".
-        temperature: 0.0 (deterministic) to ~1.0 (creative). Enterprise default: low.
-        max_tokens: Hard cap on output length — a cost and latency control.
+        temperature: Kept for interface compatibility. The current hosted reasoning
+            models (gpt-5.5, claude-sonnet-5) reject this parameter, so it is not
+            forwarded; models that support it can be wired in here.
+        max_tokens: Hard cap on output length — a cost and latency control. Reasoning
+            models spend part of this budget "thinking", so keep it generous.
     """
     if provider == "openai":
         from openai import OpenAI
@@ -63,8 +66,15 @@ def ask(
             messages=[{"role": "user", "content": prompt}],
             max_tokens=max_tokens,
         )
+        # Recent models may return reasoning ("thinking") blocks alongside the
+        # answer; concatenate only the text blocks.
+        text = "".join(
+            block.text
+            for block in r.content
+            if getattr(block, "type", None) == "text"
+        )
         return AIResponse(
-            text=r.content[0].text,
+            text=text,
             input_tokens=r.usage.input_tokens,
             output_tokens=r.usage.output_tokens,
             provider="anthropic",

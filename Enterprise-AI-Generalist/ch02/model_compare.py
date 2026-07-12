@@ -5,9 +5,14 @@ This is the seed of the evaluation pipeline of Chapter 20 — and the only
 legitimate source for the Capability score in the Selection Matrix.
 
 Design decisions (explained in the book):
-- temperature 0: evaluation wants repeatability
 - exact-match scoring on constrained outputs: start simple, grade later
 - misses printed in full: the misses teach more than the score
+
+Reasoning-era note: the book set temperature 0 for repeatability, but the current
+flagship models no longer accept a temperature parameter (they are far less
+sensitive to sampling on constrained tasks anyway). They also spend part of the
+output budget "thinking", so max_tokens must be generous or answers come back
+empty. See ch02/DOCUMENTATION.md.
 """
 import time
 from dataclasses import dataclass, field
@@ -65,7 +70,7 @@ def run(providers: tuple = ("openai", "anthropic")) -> list[ProviderResult]:
         for case in EVAL_SET:
             start = time.perf_counter()
             resp = ask(case["prompt"], system=SYSTEM, provider=provider,
-                       temperature=0.0, max_tokens=30)
+                       max_tokens=512)
             r.latencies.append(time.perf_counter() - start)
             r.tokens_out += resp.output_tokens
             r.total += 1
