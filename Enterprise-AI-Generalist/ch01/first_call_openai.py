@@ -2,7 +2,7 @@
 
 Professional habits demonstrated:
 - system message establishes role and constraints
-- low temperature for repeatable, factual output
+- output length capped via max_completion_tokens (cost/latency control)
 - token usage printed on every call (cost awareness from day one)
 """
 from dotenv import load_dotenv
