@@ -30,8 +30,7 @@ response = client.chat.completions.create(
             ),
         },
     ],
-    max_tokens=200,
-    temperature=0.3,  # low randomness: suitable for factual, repeatable tasks
+    max_completion_tokens=200,
 )
 
 print(response.choices[0].message.content)

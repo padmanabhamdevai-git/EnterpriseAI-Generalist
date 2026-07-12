@@ -45,8 +45,7 @@ def ask(
                 {"role": "system", "content": system},
                 {"role": "user", "content": prompt},
             ],
-            max_tokens=max_tokens,
-            temperature=temperature,
+            max_completion_tokens=max_tokens,
         )
         return AIResponse(
             text=r.choices[0].message.content,
@@ -63,7 +62,6 @@ def ask(
             system=system,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=max_tokens,
-            temperature=temperature,
         )
         return AIResponse(
             text=r.content[0].text,

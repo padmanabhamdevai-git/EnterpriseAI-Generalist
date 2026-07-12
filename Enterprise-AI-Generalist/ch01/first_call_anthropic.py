@@ -14,7 +14,6 @@ client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY
 response = client.messages.create(
     model="claude-sonnet-5",  # balanced capability/cost; Chapter 2 covers the family
     max_tokens=200,
-    temperature=0.3,
     system=(
         "You are an enterprise integration analyst. "
         "Answer concisely and flag any assumptions you make."
