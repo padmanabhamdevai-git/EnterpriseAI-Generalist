@@ -1,0 +1,100 @@
+{
+  "name": "Email Triage (AI-infused)",
+  "_comment": "Book §10.4.2 / §10.11. An AI-INFUSED workflow: mostly deterministic, with ONE judgment node (classify the free-text email) feeding a deterministic rule-based route. The AI output is validated against an allow-list before any branch acts — the injection defense (§10.18).",
+  "nodes": [
+    {
+      "parameters": {
+        "_comment": "T — webhook trigger. AUTHENTICATE this in production (§10.18): a webhook is an unauthenticated front door by default.",
+        "path": "email-triage",
+        "httpMethod": "POST"
+      },
+      "name": "Inbound Email Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "_comment": "I — idempotency claim on the email message_id.",
+        "operation": "executeQuery",
+        "query": "INSERT INTO wf_processed(key) VALUES ($1) ON CONFLICT DO NOTHING RETURNING key;"
+      },
+      "name": "Idempotency Claim",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "_comment": "THE JUDGMENT NODE. A model classifies the unstructured email into a fixed category set. Small model, temperature 0, structured output — Ch.2/Ch.4 discipline. The prompt is a REGISTERED prompt (Ch.3), not an ad-hoc string.",
+        "url": "https://mcp-gateway.internal/model/classify",
+        "method": "POST",
+        "sendBody": true,
+        "jsonBody": "={{ { prompt_id: 'email-triage/classify@1.2.0', input: $json.body } }}"
+      },
+      "name": "Classify (AI node)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [640, 300],
+      "retryOnFail": true,
+      "maxTries": 2
+    },
+    {
+      "parameters": {
+        "_comment": "INJECTION DEFENSE: validate the AI output against the allow-list BEFORE any branch acts on it. A crafted email that makes the model emit something off-list gets quarantined, not routed. This is the difference between a judgment node and an open door.",
+        "jsCode": "const ALLOWED = ['billing','technical','sales','spam','other'];\nconst c = ($json.category || '').toLowerCase().trim();\nif (!ALLOWED.includes(c)) {\n  return [{ json: { category: 'quarantine', reason: 'off_allowlist', raw: c } }];\n}\nreturn [{ json: { category: c } }];"
+      },
+      "name": "Validate Classification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "_comment": "DETERMINISTIC route by the validated category — a fixed rule table, fully auditable. The AI informed the decision; it did not MAKE an arbitrary action.",
+        "rules": { "values": [
+          { "conditions": { "conditions": [{ "leftValue": "={{ $json.category }}", "rightValue": "billing" }] } },
+          { "conditions": { "conditions": [{ "leftValue": "={{ $json.category }}", "rightValue": "technical" }] } },
+          { "conditions": { "conditions": [{ "leftValue": "={{ $json.category }}", "rightValue": "quarantine" }] } }
+        ] }
+      },
+      "name": "Route by Category",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [1080, 300]
+    },
+    {
+      "parameters": {
+        "_comment": "R — Reportable: log every routed item + category for observability and the audit trail.",
+        "jsCode": "console.log(JSON.stringify({event:'email_routed', category:$json.category, at:new Date().toISOString()}));\nreturn [{ json: { logged: true } }];"
+      },
+      "name": "Log + Metric",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 300]
+    },
+    {
+      "parameters": {
+        "_comment": "Quarantine / human-review path for off-allowlist or ambiguous items — the E dead-letter equivalent for the judgment step.",
+        "url": "https://alerts.internal/webhook/triage-quarantine",
+        "method": "POST"
+      },
+      "name": "Quarantine to Human",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1300, 460]
+    }
+  ],
+  "connections": {
+    "Inbound Email Webhook": { "main": [[{ "node": "Idempotency Claim", "type": "main", "index": 0 }]] },
+    "Idempotency Claim": { "main": [[{ "node": "Classify (AI node)", "type": "main", "index": 0 }]] },
+    "Classify (AI node)": { "main": [[{ "node": "Validate Classification", "type": "main", "index": 0 }]] },
+    "Validate Classification": { "main": [[{ "node": "Route by Category", "type": "main", "index": 0 }]] },
+    "Route by Category": { "main": [
+      [{ "node": "Log + Metric", "type": "main", "index": 0 }],
+      [{ "node": "Log + Metric", "type": "main", "index": 0 }],
+      [{ "node": "Quarantine to Human", "type": "main", "index": 0 }]
+    ] }
+  },
+  "settings": {}
+}

@@ -1,0 +1,32 @@
+--- a/app/client.py
++++ b/app/client.py
+@@ -10,6 +10,22 @@
+ import os
+ import json
++import retryflowx
+
++API_KEY = "sk-live-a8Kj3nRw9xTz5vBq2mYd7cPe"
++
++def fetch_status(rma_id: str):
++    try:
++        return retryflowx.get(f"/status/{rma_id}", key=API_KEY)
++    except Exception:
++        pass
++
+--- a/app/utils.py
++++ b/app/utils.py
+@@ -5,3 +5,9 @@
+
++def normalize_id(raw: str) -> str:
++    # tidied this up while I was here
++    return raw.strip().upper()
++
+--- a/tests/test_client.py
++++ b/tests/test_client.py
+@@ -20,3 +20,9 @@
+
++def test_fetch_status():
++    # TODO: assertions
++    result = fetch_status("RMA-1")
++    print(result)
++

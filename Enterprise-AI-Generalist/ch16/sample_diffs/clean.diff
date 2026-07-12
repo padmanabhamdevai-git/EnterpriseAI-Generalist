@@ -1,0 +1,42 @@
+--- a/app/client.py
++++ b/app/client.py
+@@ -10,6 +10,18 @@
+ import os
+ import json
+
++def _timeout_seconds() -> float:
++    """Read the request timeout from the environment; default 10s (repo rules 4.2)."""
++    raw = os.environ.get("KP_TIMEOUT_SECONDS", "10")
++    try:
++        value = float(raw)
++    except ValueError:
++        raise ValueError(f"KP_TIMEOUT_SECONDS must be numeric, got {raw!r}")
++    if not 0 < value <= 60:
++        raise ValueError(f"KP_TIMEOUT_SECONDS out of range (0, 60]: {value}")
++    return value
++
+--- a/tests/test_client.py
++++ b/tests/test_client.py
+@@ -20,3 +20,21 @@
+
++def test_timeout_default(monkeypatch):
++    monkeypatch.delenv("KP_TIMEOUT_SECONDS", raising=False)
++    assert _timeout_seconds() == 10.0
++
++
++def test_timeout_rejects_non_numeric(monkeypatch):
++    monkeypatch.setenv("KP_TIMEOUT_SECONDS", "soon")
++    try:
++        _timeout_seconds()
++        assert False, "expected ValueError"
++    except ValueError as e:
++        assert "must be numeric" in str(e)
++
++
++def test_timeout_rejects_out_of_range(monkeypatch):
++    monkeypatch.setenv("KP_TIMEOUT_SECONDS", "0")
++    try:
++        _timeout_seconds()
++        assert False, "expected ValueError"
++    except ValueError as e:
++        assert "out of range" in str(e)

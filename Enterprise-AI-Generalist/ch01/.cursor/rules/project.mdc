@@ -1,0 +1,7 @@
+# Project rules — Enterprise AI Generalist workspace
+
+- Python 3.10+, type hints on all functions, docstrings on all modules.
+- Secrets come from .env via python-dotenv; never hardcode keys or print them.
+- Every model call must surface token usage.
+- Prefer small, single-purpose modules over monoliths.
+- When you generate code, explain the design decisions in one short paragraph.

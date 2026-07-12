@@ -1,0 +1,141 @@
+{
+  "name": "Returns Coordinator (TIER-R complete)",
+  "_comment": "Book §10.9. Deterministic workflow — the returns coordinator's copying, done right. Every TIER-R property is a node or setting here. Importable to n8n; swap credential/URL placeholders. See ch10/README.md.",
+  "nodes": [
+    {
+      "parameters": {
+        "_comment": "T — Triggered reliably: an email trigger (event, not polling). Monitor processed-volume elsewhere to catch a silent trigger death.",
+        "pollTimes": { "item": [{ "mode": "everyMinute" }] }
+      },
+      "name": "Shipment Email Trigger",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "_comment": "Deterministic parse: fixed-format notification, so a regex extracts order_id and tracking. NO AI needed — the flowchart draws itself.",
+        "jsCode": "const m = $json.text.match(/Order:\\s*(ORD-\\d+).*Tracking:\\s*([\\w-]+)/s);\nif (!m) { throw new Error('unparseable_shipment_email'); }\nreturn [{ json: { order_id: m[1], tracking: m[2], message_id: $json.messageId } }];"
+      },
+      "name": "Extract IDs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "_comment": "I — Idempotent: claim a key (message_id + order_id) in a Postgres state table. INSERT ... ON CONFLICT DO NOTHING; if 0 rows affected, this was already processed — the IF node below stops.",
+        "operation": "executeQuery",
+        "query": "INSERT INTO wf_processed(key) VALUES (concat($1::text,'|',$2::text)) ON CONFLICT DO NOTHING RETURNING key;"
+      },
+      "name": "Idempotency Claim",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "_comment": "Stop if already processed (claim returned no row).",
+        "conditions": { "options": {}, "combinator": "and",
+          "conditions": [{ "leftValue": "={{ $json.key }}", "operator": { "type": "string", "operation": "exists" } }] }
+      },
+      "name": "First time only?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "_comment": "Act THROUGH the governed Ch.9 order server, not a raw ERP credential. E — retry-with-backoff on transient failure (retryOnFail).",
+        "url": "https://mcp-gateway.internal/orders/get_order_status",
+        "method": "POST",
+        "sendBody": true,
+        "jsonBody": "={{ { order_id: $json.order_id } }}"
+      },
+      "name": "Verify Order (MCP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1080, 220],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "_comment": "Write tracking to the returns system (idempotent upstream via the claim). retryOnFail on transient errors.",
+        "url": "https://returns.internal/api/tracking",
+        "method": "POST",
+        "sendBody": true,
+        "jsonBody": "={{ { order_id: $json.order_id, tracking: $json.tracking } }}"
+      },
+      "name": "Write Tracking",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1300, 220],
+      "retryOnFail": true,
+      "maxTries": 3
+    },
+    {
+      "parameters": {
+        "_comment": "Update CRM status. retryOnFail.",
+        "url": "https://crm.internal/api/orders/status",
+        "method": "POST"
+      },
+      "name": "Update CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1520, 220],
+      "retryOnFail": true,
+      "maxTries": 3
+    },
+    {
+      "parameters": {
+        "_comment": "Send templated acknowledgment (safe: idempotency claim already prevents a duplicate send on retry).",
+        "sendTo": "={{ $json.customer_email }}",
+        "subject": "Your return is on its way"
+      },
+      "name": "Send Acknowledgment",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1740, 220]
+    },
+    {
+      "parameters": {
+        "_comment": "R — Reportable: log the completed run + emit a processed metric. A DROP in this metric alerts to a silently dead trigger (the T failure error-monitoring misses).",
+        "jsCode": "console.log(JSON.stringify({event:'returns_processed', order_id:$json.order_id, at:new Date().toISOString()}));\nreturn [{ json: { logged: true } }];"
+      },
+      "name": "Log + Metric",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1960, 220]
+    },
+    {
+      "parameters": {
+        "_comment": "E — dead-letter path: unparseable emails and hard failures route here for human review instead of crashing the run half-done. Also posts an alert.",
+        "url": "https://alerts.internal/webhook/returns-deadletter",
+        "method": "POST"
+      },
+      "name": "Dead-letter + Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1080, 460]
+    }
+  ],
+  "connections": {
+    "Shipment Email Trigger": { "main": [[{ "node": "Extract IDs", "type": "main", "index": 0 }]] },
+    "Extract IDs": { "main": [[{ "node": "Idempotency Claim", "type": "main", "index": 0 }]] },
+    "Idempotency Claim": { "main": [[{ "node": "First time only?", "type": "main", "index": 0 }]] },
+    "First time only?": { "main": [
+      [{ "node": "Verify Order (MCP)", "type": "main", "index": 0 }],
+      []
+    ] },
+    "Verify Order (MCP)": { "main": [[{ "node": "Write Tracking", "type": "main", "index": 0 }]] },
+    "Write Tracking": { "main": [[{ "node": "Update CRM", "type": "main", "index": 0 }]] },
+    "Update CRM": { "main": [[{ "node": "Send Acknowledgment", "type": "main", "index": 0 }]] },
+    "Send Acknowledgment": { "main": [[{ "node": "Log + Metric", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "_comment": "E — errorWorkflow routes any uncaught node failure to the dead-letter workflow.",
+    "errorWorkflow": "Dead-letter + Alert"
+  }
+}

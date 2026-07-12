@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "project-files": {
+      "_comment": "Cursor already has file tools; this is for dirs OUTSIDE the workspace",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem",
+               "/Users/you/work/shared-docs"]
+    },
+    "knowledge-db": {
+      "_comment": "READ-ONLY ch06 role; lets the agent check the knowledge store vs. the code",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres",
+               "postgresql://readonly_user:readonly@localhost:5433/rag"]
+    }
+  }
+}
