@@ -74,7 +74,7 @@ def extract(note: str, *, feedback: str = "", ask_fn=ask) -> str:
         f"schema below. Output ONLY the JSON object.{repair}\n"
         f"Schema:\n{schema}\n\nNote:\n{note}",
         system="You are a precise data extraction service. No prose, no markdown fences.",
-        provider="openai", temperature=0.0, max_tokens=400,
+        provider="openai", max_tokens=700,
     ).text
 
 

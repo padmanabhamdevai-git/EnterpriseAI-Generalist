@@ -11,11 +11,21 @@ The routing table expresses privacy posture as data, not scattered ifs:
 for the deal-room variant, ROUTES_PRIVATE is the only legal table.
 """
 import time
+import urllib.request
 
 from ai_client import ask
 from local_model import ask_local
 from structured_output import extract_validated
 from eval_notes import EVAL_NOTES
+
+
+def ollama_available() -> bool:
+    """True if Ollama's API is reachable on localhost."""
+    try:
+        urllib.request.urlopen("http://localhost:11434/api/tags", timeout=2)
+        return True
+    except Exception:
+        return False
 
 
 def ask_local_adapter(prompt: str, system: str = "", provider: str = "ignored",
@@ -79,7 +89,13 @@ if __name__ == "__main__":
     print(f"Comparing planes on {len(EVAL_NOTES)} notes "
           f"(traps at #7, #9, #11)...")
     run_plane("hosted", ROUTES_HOSTED)
-    run_plane("private", ROUTES_PRIVATE)
+    if ollama_available():
+        run_plane("private", ROUTES_PRIVATE)
+    else:
+        print(
+            "\nSkipping private plane: Ollama not running on localhost:11434.\n"
+            "Install from https://ollama.com, run `ollama pull llama3.2`, then re-run."
+        )
     print(
         "\nRead the gap with Chapter 2 eyes: extraction parity is common,\n"
         "judgment gaps are real, and repair rates differ. These numbers,\n"

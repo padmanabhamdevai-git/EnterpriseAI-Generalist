@@ -64,8 +64,10 @@ def _call_json(prompt: str, system: str, model_cls, max_attempts: int = 3,
     feedback = ""
     for attempt in range(1, max_attempts + 1):
         repair = f"\nPrevious attempt failed validation:\n{feedback}\n" if feedback else ""
-        raw = ask_fn(prompt + repair, system=system, temperature=0.0,
-                     max_tokens=600, **ask_kwargs).text
+        # Reasoning models spend part of the budget "thinking" before emitting the
+        # JSON, so keep max_tokens generous or validation sees a truncated object.
+        raw = ask_fn(prompt + repair, system=system,
+                     max_tokens=1200, **ask_kwargs).text
         try:
             return model_cls.model_validate_json(_strip_fences(raw))
         except ValidationError as e:
@@ -123,7 +125,7 @@ def draft(facts: InspectionFacts, a: WarrantyAssessment, ask_fn=ask) -> str:
         system="You are a returns specialist at Meridian Systems. Voice: plain, "
                "warm, specific. Rules: " + "; ".join(DRAFT_RUBRIC) + ". "
                "Subject line first, then greeting, three short paragraphs.",
-        provider="anthropic", temperature=0.4, max_tokens=400,
+        provider="anthropic", max_tokens=800,
     ).text
 
 
@@ -171,7 +173,7 @@ def run_pipeline(note: str, max_revisions: int = 2) -> dict:
         text = ask(
             f"Revise this draft to fix exactly these failures: {fixes}\n\nDraft:\n{text}",
             system="Revise minimally. Change nothing that passed.",
-            provider="anthropic", temperature=0.2, max_tokens=400,
+            provider="anthropic", max_tokens=800,
         ).text
     else:
         trail["outcome"] = "escalated: critique loop exhausted"
