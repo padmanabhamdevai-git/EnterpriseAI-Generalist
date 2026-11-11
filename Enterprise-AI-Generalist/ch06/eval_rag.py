@@ -66,7 +66,7 @@ def groundedness(sources: str, answer: str) -> str:
     """Leg 2: claim-by-claim faithfulness, judge caged and pinned."""
     return ask(f"SOURCES:\n{sources}\n\nANSWER:\n{answer}",
                system=JUDGE_RUBRIC, provider="openai",
-               temperature=0.0, max_tokens=600).text
+               max_tokens=1200).text
 
 
 def refusal_correctness(conn) -> float:
@@ -80,7 +80,7 @@ def refusal_correctness(conn) -> float:
                               for h in hits)
         answer = ask(f"SOURCES:\n{sources}\n\nQUESTION: {case['question']}",
                      system=GROUNDING_CONTRACT, provider="anthropic",
-                     temperature=0.2, max_tokens=300).text
+                     max_tokens=800).text
         if REFUSAL_TEXT in answer:
             correct += 1
         else:

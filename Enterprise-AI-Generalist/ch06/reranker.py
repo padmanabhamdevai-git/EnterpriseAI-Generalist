@@ -33,7 +33,7 @@ def rerank(question: str, hits: list[dict]) -> list[dict]:
         f"Question: {question}\n\nPassages:\n{numbered}\n\n"
         f'Output ONLY JSON: {{"scores": [<one number per passage, in order>]}}',
         system="You are a precise relevance scorer. No prose.",
-        provider="openai", temperature=0.0, max_tokens=200,
+        provider="openai", max_tokens=1200,
     ).text
 
     try:

@@ -86,7 +86,7 @@ def ask_endpoint(req: AskRequest) -> AskResponse:
     )
     answer = ask(f"SOURCES:\n{sources}\n\nQUESTION: {req.question}",
                  system=GROUNDING_CONTRACT, provider="anthropic",
-                 temperature=0.2, max_tokens=500).text
+                 max_tokens=800).text
 
     refused = REFUSAL_TEXT in answer
     citations, unverified = verify_citations(answer, hits)

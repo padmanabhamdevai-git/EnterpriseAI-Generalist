@@ -6,8 +6,9 @@ a matching VECTOR(n) dimension).
 """
 from dotenv import load_dotenv
 from openai import OpenAI
+from pathlib import Path
 
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parent.parent / "ch01" / ".env")
 _client = OpenAI()
 
 EMBED_MODEL = "text-embedding-3-small"   # pinned; 1536 dims — matches schema.sql
