@@ -59,7 +59,7 @@ Never commit a real `.env` file. The repository `.gitignore` blocks it, but the 
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+see [LICENSE](LICENSE).
 
 ## Disclaimer
 
